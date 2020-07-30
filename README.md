@@ -1,1 +1,2 @@
-# hub-api
+# hub
+Tridacom Hub Application

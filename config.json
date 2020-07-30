@@ -1,0 +1,26 @@
+{
+  "mongoURI": "mongodb+srv://roman:3suqo78o7OA9KF1i@cluster0.elmu7.azure.mongodb.net/test2",
+  "jwtSecret": "KY53uLsjcDXzFaucDYta",
+  "jwtExpiry": 36000,
+  "sendgridKey": "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",
+  "sendgridTemplate": {
+    "newUser": "d-fa85fac9e6c74eec827c014178717397",
+    "forgetPassword": "d-dcfe1588cd3e40e9b6c4772f5c104b94",
+    "emailVerification": "d-79c6513f982f4efdb22a020815de260c"
+  },
+  "twilioSid": "AC57f034e662c504f4786aa3608206c037",
+  "twilioKey": "90cf02632325c26f5cd71453d32b5b30",
+  "twilioService": {
+    "smsMFA": "MG1d2dc0ba22c1018996d489669cd96fb4"
+  },
+  "azureStorageConfig": {
+    "accountName": "hubdevstore",
+    "accountKey": "8YSG9IsGtHhqbb/TAXSFO2dstjh2EwOLLS9wB/wOCvXImsKNXzcV9AsNDpsjYbDUyA7DO+2bQRayAdLtxghBUg==",
+    "blobURL": "https://hubdevstore.blob.core.windows.net/"
+  },
+  "hereApi": {
+    "apiKey": "MCCj8HuLi_bLVJaFq1EMeqICpj-bCt6JhjhkQfoCoi0",
+    "totalSuggestions": 10
+  },
+  "socketIO_Key": "trihub$123#SessionKeY!2387"
+}

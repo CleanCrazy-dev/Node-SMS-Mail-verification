@@ -1,5 +1,5 @@
 {
-  "mongoURI": "mongodb+srv://roman:3suqo78o7OA9KF1i@cluster0.elmu7.azure.mongodb.net/test2",
+  "mongoURI": "mongodb+srv://roman:3suqo78o7OA9KF1i@cluster0.elmu7.azure.mongodb.net/hub_dev",
   "jwtSecret": "KY53uLsjcDXzFaucDYta",
   "jwtExpiry": 36000,
   "sendgridKey": "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",

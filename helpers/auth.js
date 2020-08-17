@@ -1,13 +1,19 @@
-const config = require('config');
+var nconf = require('nconf');
 const jwt = require('jsonwebtoken');
 const { sendSMS } = require('./twilio');
 const { sendEmail } = require('./sendgrid');
 const { uuid } = require('uuidv4');
+var winston = require('winston');
 const User = require('./../models/User');
+const EMAILVERIFICATION = nconf.get('sendgridTemplate')
+const TWILIOSERVICE = nconf.get('twilioService')
+const JWTSECRET = nconf.get('jwtSecret')
+const JWTEXPIRY = nconf.get('jwtExpiry')
+
 
 // Send SMS Verification Code
 module.exports.sendSMSVerification = async function (userId) {
-  console.log('User ID', userId);
+  winston.debug('UserID:',userId)
   try {
     const user = await User.findById(userId).select(
       'phone authentication.phoneToken verifiedPhone'
@@ -23,7 +29,7 @@ module.exports.sendSMSVerification = async function (userId) {
 
     const smsParams = {
       body: `${phoneCode}\nUse this code for Tridacom verification`,
-      messagingServiceSid: config.twilioService.smsMFA,
+      messagingServiceSid: TWILIOSERVICE.smsMFA,
       to: phone,
     };
 
@@ -68,7 +74,7 @@ module.exports.sendEmailVerification = async function (userId) {
         email: 'noreply@tridacom.com',
         name: 'Tridacom IT Solutions Inc.',
       },
-      template_id: config.sendgridTemplate.get('emailVerification'),
+      template_id: EMAILVERIFICATION.emailVerification,
     };
 
     return sendEmail(msg);
@@ -86,8 +92,8 @@ module.exports.loginUser = async function (userData) {
       },
     };
 
-    var jwtToken = jwt.sign(payload, config.get('jwtSecret'), {
-      expiresIn: config.get('jwtExpiry'),
+    var jwtToken = jwt.sign(payload, JWTSECRET, {
+      expiresIn: JWTEXPIRY,
     });
 
     if (!jwtToken) {

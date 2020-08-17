@@ -6,10 +6,10 @@ var _ = require('lodash');
 var Chance = require('chance');
 
 // Required for linkage
-require('./role');
+// require('./role');
 
 var SALT_FACTOR = 10;
-var COLLECTION = 'accounts';
+var COLLECTION = 'users';
 
 /**
  * User Schema
@@ -17,49 +17,68 @@ var COLLECTION = 'accounts';
  * @class User
  *
  * @property {object} _id ```Required``` ```unique``` MongoDB Object ID
- * @property {String} password ```Required``` Bcrypt password
- * @property {String} fullname ```Required``` Full name of user
- * @property {String} email ```Required``` ```unique``` Email Address of user
- * @property {String} role ```Required``` Permission role of the given user. See {@link Permissions}
- * @property {Date} lastOnline Last timestamp given user was online.
+ * @property {String} firstName ```Required``` first name of user
+ * @property {String} lastName ```Required``` last name of user
  * @property {String} title Job Title of user
- * @property {String} image Filename of user image
- * @property {String} resetPassHash Password reset has for recovery password link.
- * @property {Date} resetPassExpire Date when the password recovery link will expire
- * @property {String} tOTPKey One Time Password Secret Key
- * @property {Number} tOTPPeriod One Time Password Key Length (Time) - Default 30 Seconds
- * @property {String} accessToken API Access Token
- * @property {Array} iOSDeviceTokens Array of String based device Ids for Apple iOS devices. *push notifications*
- * @property {Object} preferences Object to hold user preferences
- * @property {Boolean} preferences.autoRefreshTicketGrid Enable the auto refresh of the ticket grid.
- * @property {Boolean} deleted Account Deleted
+ * @property {String} password ```Required``` Bcrypt password
+ * @property {String} email ```Required``` ```unique``` Email Address of user
+ * @property {String} role ```Required``` Permission role of the given user IT SYSTEM MANAGEMENT ROLE. See {@link Permissions} 
+ * @property {String} image ```Required```  Profile image link of user
+ * @property {String} officePhone ```Required```  office phone number of user
+ * @property {String} phone ```Required```  mobile phone number of user
+ * @property {String} officeLocation ```Required```  Primary office Location state
+ * @property {String} department ```Required```  department
  */
 var userSchema = mongoose.Schema({
-  username: { type: String, required: true, unique: true, lowercase: true },
-  password: { type: String, required: true, select: false },
-  fullname: { type: String, required: true, index: true },
-  email: { type: String, required: true, unique: true, lowercase: true },
-  role: { type: mongoose.Schema.Types.ObjectId, ref: 'roles', required: true },
-  lastOnline: Date,
+  firstName: { type: String, required: true},
+  lastName: { type: String, required: true},
   title: String,
+  password: { type: String, required: true},
+  email: { type: String, required: true, unique: true, lowercase: true },
+  role: { type: String, required: true },
   image: String,
-
-  resetPassHash: { type: String, select: false },
-  resetPassExpire: { type: Date, select: false },
-  tOTPKey: { type: String, select: false },
-  tOTPPeriod: { type: Number, select: false },
-  resetL2AuthHash: { type: String, select: false },
-  resetL2AuthExpire: { type: Date, select: false },
-  hasL2Auth: { type: Boolean, required: true, default: false },
-  accessToken: { type: String, sparse: true, select: false },
-
-  preferences: {
-    tourCompleted: { type: Boolean, default: false },
-    autoRefreshTicketGrid: { type: Boolean, default: true },
-    openChatWindows: [{ type: String, default: [] }],
+  officePhone: {type: String,required: true},
+  phone:{type: String,required: true},
+  officeLocation:{type: String,required: true},
+  department:{type: String,required: true},
+  verifiedPhone: {
+    type: Boolean,
+    required: true,
+    default: false,
   },
-
-  deleted: { type: Boolean, default: false },
+  verifiedEmail: {
+    type: Boolean,
+    required: true,
+    default: false,
+  },
+  jwtToken:{
+    type:String
+  },
+  authentication: {
+    preferredMFA: {
+      type: String,
+      enum: ['phone', 'email', 'push'],
+      default: 'phone',
+    },
+    phoneToken: {
+      type: String,
+    },
+    phoneTokenExpires: {
+      type: Number,
+    },
+    emailToken: {
+      type: String,
+    },
+    emailTokenExpires: {
+      type: Number,
+    },
+    resetPasswordToken: {
+      type: String,
+    },
+    resetPasswordExpires: {
+      type: Number,
+    },
+  },
 });
 
 userSchema.set('toObject', { getters: true });
@@ -69,15 +88,12 @@ var autoPopulateRole = function (next) {
   next();
 };
 
-userSchema.pre('findOne', autoPopulateRole).pre('find', autoPopulateRole);
+// userSchema.pre('findOne', autoPopulateRole).pre('find', autoPopulateRole);
 
 userSchema.pre('save', function (next) {
   var user = this;
-
-  user.username = user.username.toLowerCase().trim();
-  user.email = user.email.trim();
-  if (user.fullname) user.fullname = user.fullname.trim();
-  if (user.title) user.title = user.title.trim();
+  // user.email = user.email.trim();
+  // if (user.title) user.title = user.title.trim();
 
   if (!user.isModified('password')) {
     return next();

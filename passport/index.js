@@ -4,7 +4,8 @@ var TotpStrategy = require('passport-totp').Strategy;
 var JwtStrategy = require('passport-jwt').Strategy;
 var ExtractJwt = require('passport-jwt').ExtractJwt;
 var base32 = require('thirty-two');
-var User = require('../models/User1');
+var User = require('../models/User');
+// var User = require('../models/User1');
 var nconf = require('nconf');
 
 module.exports = function () {

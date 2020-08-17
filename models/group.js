@@ -19,11 +19,12 @@ var groupSchema = mongoose.Schema({
   members: [
     {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'accounts',
+      // ref: 'accounts',
       autopopulate: { select: '-hasL2Auth -preferences -__v' },
     },
   ],
-  sendMailTo: [{ type: mongoose.Schema.Types.ObjectId, ref: 'accounts' }],
+  sendMailTo: [{ type: mongoose.Schema.Types.ObjectId }],
+  // sendMailTo: [{ type: mongoose.Schema.Types.ObjectId, ref: 'accounts' }],
   public: { type: Boolean, required: true, default: false },
 });
 

@@ -1,6 +1,14 @@
 var async = require('async');
 var _ = require('lodash');
 var winston = require('winston');
+const { validationResult } = require('express-validator');
+var nconf = require('nconf');
+const jwt = require('jsonwebtoken');
+const phoneToken = require('generate-sms-verification-code');
+var User = require('../../../models/User');
+const { sendEmail } = require('../../../helpers/sendgrid');
+
+
 /*
 var permissions = require('../../../permissions');
 var emitter = require('../../../emitter');
@@ -9,7 +17,6 @@ var groupSchema = require('../../../models/group');
 var notificationSchema = require('../../../models/notification');
 */
 var apiUsers = {};
-
 /**
  * @api {get} /api/v1/users Gets users with query string
  * @apiName getUsers
@@ -250,9 +257,9 @@ apiUsers.create = function (req, res) {
  *
  * @apiParamExample {json} Request-Example:
  * {
- *      "aFullname":    "user name",
- *      "aEmail":       "email@email.com""
- *      "aPassword":    "password",
+ *      "firstName":    "user first name",
+ *      "lastName":     "user last name"
+ *      "email":    "email@email.com"",
  * }
  *
  * @apiSuccess {boolean} success If the Request was a success
@@ -278,40 +285,24 @@ apiUsers.createPublicAccount = function (req, res) {
   async.waterfall(
     [
       function (next) {
-        var SettingSchema = require('../../../models/setting');
-        SettingSchema.getSetting('role:user:default', function (
-          err,
-          roleDefault
-        ) {
-          if (err) return next(err);
-          if (!roleDefault) {
-            winston.error(
-              'No Default User Role Set. (Settings > Permissions > Default User Role)'
-            );
-            return next({
-              message: 'No Default Role Set. Please contact administrator.',
-            });
-          }
-
-          return next(null, roleDefault);
+        user = new User({
+          firstName: postData.firstName,
+          lastName:postData.lastName,
+          email:postData.email,
+          title:postData.title,
+          password:postData.password,
+          officePhone:postData.officePhone,
+          phone:postData.phone,
+          officeLocation:postData.officeLocation,
+          role: postData.role,
+          department:postData.department,
         });
-      },
-      function (roleDefault, next) {
-        var UserSchema = require('../../../models/user');
-        user = new UserSchema({
-          username: postData.user.email,
-          password: postData.user.password,
-          fullname: postData.user.fullname,
-          email: postData.user.email,
-          role: roleDefault.value,
-        });
-
         user.save(function (err, savedUser) {
           if (err) return next(err);
-
           return next(null, savedUser);
         });
       },
+      
       function (savedUser, next) {
         var GroupSchema = require('../../../models/group');
         group = new GroupSchema({
@@ -743,53 +734,53 @@ apiUsers.enableUser = function (req, res) {
      "error": "Invalid Request"
  }
  */
-apiUsers.single = function (req, res) {
-  var username = req.params.username;
-  if (_.isUndefined(username))
-    return res.status(400).json({ error: 'Invalid Request.' });
+// apiUsers.single = function (req, res) {
+//   var username = req.params.username;
+//   if (_.isUndefined(username))
+//     return res.status(400).json({ error: 'Invalid Request.' });
 
-  var response = {
-    success: true,
-    groups: [],
-  };
+//   var response = {
+//     success: true,
+//     groups: [],
+//   };
 
-  async.waterfall(
-    [
-      function (done) {
-        UserSchema.getUserByUsername(username, function (err, user) {
-          if (err) return done(err);
+//   async.waterfall(
+//     [
+//       function (done) {
+//         UserSchema.getUserByUsername(username, function (err, user) {
+//           if (err) return done(err);
 
-          if (_.isUndefined(user) || _.isNull(user))
-            return done('Invalid Request');
+//           if (_.isUndefined(user) || _.isNull(user))
+//             return done('Invalid Request');
 
-          user = stripUserFields(user);
-          response.user = user;
+//           user = stripUserFields(user);
+//           response.user = user;
 
-          done(null, user);
-        });
-      },
-      function (user, done) {
-        groupSchema.getAllGroupsOfUserNoPopulate(user._id, function (
-          err,
-          grps
-        ) {
-          if (err) return done(err);
+//           done(null, user);
+//         });
+//       },
+//       function (user, done) {
+//         groupSchema.getAllGroupsOfUserNoPopulate(user._id, function (
+//           err,
+//           grps
+//         ) {
+//           if (err) return done(err);
 
-          response.groups = _.map(grps, function (o) {
-            return o._id;
-          });
+//           response.groups = _.map(grps, function (o) {
+//             return o._id;
+//           });
 
-          done(null, response.groups);
-        });
-      },
-    ],
-    function (err) {
-      if (err) return res.status(400).json({ error: err });
+//           done(null, response.groups);
+//         });
+//       },
+//     ],
+//     function (err) {
+//       if (err) return res.status(400).json({ error: err });
 
-      res.json(response);
-    }
-  );
-};
+//       res.json(response);
+//     }
+//   );
+// };
 
 /**
  * @api {get} /api/v1/users/notificationCount Get Notification Count
@@ -1213,5 +1204,127 @@ function stripUserFields(user) {
 
   return user;
 }
+apiUsers.verifyEmailByUserId = async function (req, res) {
+  const token = req.params.id;
 
+  try {
+    let user = await User.findOne({ "authentication.emailToken": token });
+
+    if (!user) {
+      return res.status(400).json({ errors: [{ msg: 'Validation Failed' }] });
+    }
+    user.emailToken = null;
+    user.verifiedEmail = true;
+
+    await user.save();
+
+    if (!user.verifiedPhone)
+      return res.status(200).json({
+        msg: 'Successfully Validated Email.',
+        errors: [{ msg: 'Phone number needs to be validated' }],
+      });
+
+    res.status(200).send(payload);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({
+      statusCode: 500,
+      errors: [{ msg: 'Server Error', errorCode: 'serverError' }],
+    });
+  }
+}
+
+apiUsers.validatePhoneNumber = async function (req, res) {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  const { phone, token } = req.body;
+  try {
+    let user = await User.findOne({
+      $and: [{ phone }, {"authentication.phoneToken": token }],
+    });
+
+    if (!user) {
+      return res.status(400).json({ errors: [{ msg: 'Validation Failed' }] });
+    }
+
+    user.authentication.phoneToken = null;
+    user.verifiedPhone = true;
+
+    await user.save();
+
+    if (!user.verifiedEmail)
+      return res.status(200).json({
+        msg: 'Successfully Validated Phone Number.',
+        errors: [{ msg: 'Email needs to be validated' }],
+      });
+
+    const payload = {
+      user: {
+        id: user.id,
+      },
+    };
+    res.status(200).send(payload);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({
+      statusCode: 500,
+      errors: [{ msg: 'Server Error', errorCode: 'serverError' }],
+    });
+  }
+}
+
+apiUsers.forgotPassword = function (req, res) {
+  async.waterfall(
+    [
+      function (done) {
+        const token = phoneToken(6, { type: 'number' });
+        User.findOne({ email: req.body.email }, function (err, user) {
+          if (!user) {
+            req.flash('error', 'No account with that email address exists.');
+            res.status(404).send('Can not find the current user');
+          }
+          user.authentication.resetPasswordToken = token;
+          user.authentication.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+          user.save(function (err) {
+            done(err, token, user);
+          });
+        });
+      },
+      function (token, user, done) {
+        const SENDGRID_TEMPLATE = nconf.get('sendgridTemplate');
+        const msg = {
+          personalizations: [
+            {
+              to: [
+                {
+                  email: user.email,
+                  name: user.firstName + ' ' + user.lastName,
+                },
+              ],
+              dynamic_template_data: {
+                firstName: user.firstName,
+                lastName: user.lastName,
+                emailToken: token,
+              },
+            },
+          ],
+          from: {
+            email: 'noreply@tridacom.com',
+            name: 'Tridacom IT Solutions Inc.',
+          },
+          template_id: SENDGRID_TEMPLATE.emailVerification,
+        };
+        sendEmail(msg);
+        done();
+      },
+    ],
+    function (err) {
+      if (err) return next(err);
+      res.status(200).send('Ok,just send mail!');
+    }
+  );
+}
 module.exports = apiUsers;

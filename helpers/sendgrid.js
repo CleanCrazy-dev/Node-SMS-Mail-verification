@@ -1,8 +1,8 @@
 const sgMail = require('@sendgrid/mail');
-const config = require('config');
+var nconf = require('nconf');
 const EmailLog = require('../models/EmailLog');
-sgMail.setApiKey(config.sendgridKey);
-
+sgMail.setApiKey(nconf.get('sendgridKey'));
+const SENDGRIDTEMPLATE = nconf.get('sendgridTemplate')
 // Sends Email using SendGrid
 module.exports.sendEmail = async function (mailData) {
   try {
@@ -52,7 +52,7 @@ module.exports.sendNewUserEmail = async function (userId) {
         email: 'noreply@tridacom.com',
         name: 'Tridacom IT Solutions Inc.',
       },
-      template_id: config.sendgridTemplate.newUser,
+      template_id: SENDGRIDTEMPLATE.newUser,
     };
 
     return sendEmail(msg);

@@ -1,4 +1,7 @@
-var packagejson = require('../../../package.json');
+const multer = require('multer')
+const inMemoryStorage = multer.memoryStorage();
+const singleFileUpload = multer({ storage: inMemoryStorage });
+const { check } = require('express-validator');
 
 module.exports = function (middleware, router, controllers) {
   // Shorten Vars
@@ -8,7 +11,6 @@ module.exports = function (middleware, router, controllers) {
   var isAgent = middleware.isAgent;
   var isAgentOrAdmin = middleware.isAgentOrAdmin;
   var canUser = middleware.canUser;
-
   // Users
   router.get(
     '/v1/users',
@@ -38,12 +40,6 @@ module.exports = function (middleware, router, controllers) {
     apiAuth,
     isAgentOrAdmin,
     apiCtrl.users.getAssingees
-  );
-  router.get(
-    '/v1/users/:username',
-    apiAuth,
-    canUser('accounts:view'),
-    apiCtrl.users.single
   );
   router.put(
     '/v1/users/:username',
@@ -94,9 +90,79 @@ module.exports = function (middleware, router, controllers) {
     apiAuth,
     apiCtrl.users.removeL2Auth
   );
+  // Validate Email Address
+  router.get('/v1/users/verifyEmail', [], apiCtrl.users.verifyEmailByUserId);//Done
+  // Validate Phone Number
+  router.post('/v1/users/validatePhone', [
+    check('phone', 'phone Number is required').not().isEmpty(),
+    check('token', 'Token is required').not().isEmpty(),
+  ], apiCtrl.users.validatePhoneNumber);//Done
+  // @route    POST v1/users/forgotPassword
+  // @desc     Register user
+  // @access   Public
+  router.post('/v1/users/forgotPassword', [], apiCtrl.users.forgotPassword);//Done
+  // @route    POST v1/users
+  // @desc     Register user
+  // @access   Public
+  router.post('/v1/users', [], apiCtrl.users.createPublicAccount)//Done
+  //Auth
+  router.get(
+    '/v1/auth',
+    [],
+    apiCtrl.auth.getUserByToken
+  );
+  router.post('/v1/auth', [
+    check('username', 'A valid email or phone number is required').exists(),
+    check('password', 'A password is required').exists(),
+  ], apiCtrl.auth.authUserByEmail)//Done
 
+  // @route    POST /v1/auth/verify
+  // @desc     Validate Token Against Account for MFA and Password Reset
+  // @access   Public
+  router.post('/v1/auth/verify', [
+    check('username', 'Please include a valid email or phone number').exists(),
+    check('token', 'Token is required').exists()
+  ], apiCtrl.auth.verifyTokenForResetPassword)//Done
+
+  router.post('/v1/auth/sendSMS', [
+    check('phone', 'PhoneNumber is required').exists()], apiCtrl.auth.sendSMSCodeToMFA)//Done
+  router.post('/v1/auth/sendEmail', [
+    check('email', 'Email is required').exists()], apiCtrl.auth.sendCodeToEmail)//Done
+
+  //Media
+  router.post(
+    '/v1/media/picture',
+    singleFileUpload.single('image'),
+    apiCtrl.media.uploadPicture
+  );//Done
+  router.post(
+    '/v1/media/file',
+    singleFileUpload.single('image'),
+    apiCtrl.media.uploadFile
+  );//Done
+  router.delete(
+    '/v1/media/file',
+    [
+      check('containerName', 'containerName is required').exists(),
+      check('blobName', 'blobName is required').exists(),
+    ],
+    apiCtrl.media.deleteFile
+  );//Done
+  router.post(
+    '/v1/media/retrieve-file',
+    [
+      check('containerName', 'containerName is required').exists(),
+      check('blobName', 'blobName is required').exists(),
+    ],
+    apiCtrl.media.retrieveFile
+  );//Done
+
+  router.post('/v1/services/emailLog', [], apiCtrl.services.emailLog)//Done
   // Common
-  //router.post('/v1/login', apiCtrl.commonV1.login);
+  router.post('/v1/login', [
+    check('email', 'email is required').exists(),
+    check('password', 'password is required').exists(),
+  ], apiCtrl.common.login);
   //router.post('/v1/token', apiCtrl.commonV1.token);
 
   // Accounts

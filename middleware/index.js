@@ -15,7 +15,7 @@ var passportConfig = require('../passport')();
 
 var middleware = {};
 
-module.exports = function (app, db, callback) {
+  module.exports = function (app, db, callback) {
   middleware = require('./middleware')(app);
   app.disable('x-powered-by');
 
